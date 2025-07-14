@@ -352,8 +352,8 @@ export class UserMcpAgent extends MyMCP {
 }
 
 // Create authenticated MCP handler that creates user-scoped instances
-const createAuthenticatedMcpHandler = () => {
-	return async (request: Request, env: any): Promise<Response> => {
+const authenticatedMcpHandler = {
+	async fetch(request: Request, env: any): Promise<Response> {
 		try {
 			// This handler will be called by the OAuth provider for /sse requests
 			// The OAuth provider has already validated the token and extracted user info
@@ -367,14 +367,14 @@ const createAuthenticatedMcpHandler = () => {
 			console.error("MCP handler error:", error);
 			return new Response("Internal Server Error", { status: 500 });
 		}
-	};
+	}
 };
 
 // Export the OAuth handler as the default
 export default new OAuthProvider({
 	apiRoute: "/sse",
 	// @ts-expect-error - OAuth provider types need updating
-	apiHandler: createAuthenticatedMcpHandler(),
+	apiHandler: authenticatedMcpHandler,
 	// @ts-expect-error - OAuth provider types need updating  
 	defaultHandler: app,
 	authorizeEndpoint: "/authorize",
