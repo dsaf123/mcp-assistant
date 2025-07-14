@@ -11,6 +11,8 @@ export class UserService {
     async validateCredentials(email: string, password: string): Promise<User | null> {
         const userKey = `user:${email}`;
         const userData = await this.env.OAUTH_KV.get(userKey);
+        console.log("USER KEY", userKey);
+        console.log("USER DATA", userData);
         
         if (!userData) {
             return null;

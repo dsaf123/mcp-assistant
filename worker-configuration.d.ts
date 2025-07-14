@@ -3,7 +3,9 @@
 declare namespace Cloudflare {
 	interface Env {
 		OAUTH_KV: KVNamespace;
-		MCP_OBJECT: DurableObjectNamespace<import("./src/index").MyMCP>;
+		//MCP_OBJECT: DurableObjectNamespace<import("./src/index").MyMCP>;
+        WORKOS_CLIENT_SECRET: string;
+        WORKOS_CLIENT_ID: string;
 		ASSETS: Fetcher;
 	}
 }

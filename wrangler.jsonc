@@ -21,7 +21,7 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "UserMcpAgent",
+				"class_name": "MyMCP",
 				"name": "MCP_OBJECT"
 			}
 		]

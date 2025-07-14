@@ -28,11 +28,11 @@ type HonoContext = {
 
 const app = new Hono<HonoContext>();
 
-// Apply authentication middleware to protected routes
-app.use("/api/*", createAuthMiddleware());
+// // Apply authentication middleware to protected routes
+// app.use("/api/*", createAuthMiddleware());
 
-// Mount admin routes
-app.route("/api/admin", adminApp);
+// // Mount admin routes
+// app.route("/api/admin", adminApp);
 
 // Render a basic homepage placeholder to make sure the app is up
 app.get("/", async (c) => {
@@ -43,6 +43,8 @@ app.get("/", async (c) => {
 // Render an authorization page
 // Check if user has an active session, otherwise show login form
 app.get("/authorize", async (c) => {
+
+	let isLoggedIn = false;
 	const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
 
 	const oauthScopes = [
@@ -56,20 +58,7 @@ app.get("/authorize", async (c) => {
 
 	// Check if user is already logged in via session cookie or token
 	const sessionToken = c.req.header("authorization");
-	let isLoggedIn = false;
-	let userEmail = "";
-
-	if (sessionToken) {
-		try {
-			// Try to validate existing session
-			const userService = new UserService(c.env);
-			// In a full implementation, you'd have session management
-			// For now, we'll show the logged-out flow by default
-			isLoggedIn = false;
-		} catch (error) {
-			isLoggedIn = false;
-		}
-	}
+	
 
 	if (isLoggedIn) {
 		const content = await renderLoggedInAuthorizeScreen(oauthScopes, oauthReqInfo);
@@ -96,6 +85,7 @@ app.post("/approve", async (c) => {
 
 	// Handle different approval actions
 	if (action === "login_approve") {
+		
 		// Validate email format
 		if (!UserService.isValidEmail(email)) {
 			return c.html(
@@ -117,15 +107,23 @@ app.post("/approve", async (c) => {
 			);
 		}
 
+		console.info("Validating User Credentials", email);
+
 		// Try to authenticate user
 		user = await userService.validateCredentials(email, password);
+		console.info("User", user);
+
+		
 		
 		if (!user) {
 			// Check if user exists, if not create them
 			const existingUser = await userService.getUserByEmail(email);
+			console.info("Existing User", existingUser);
 			if (!existingUser) {
 				try {
+					console.info("Creating User", email, password);
 					user = await userService.createUser(email, password);
+					console.info("Created User", user);
 				} catch (error) {
 					return c.html(
 						layout(
@@ -174,6 +172,7 @@ app.post("/approve", async (c) => {
 	// Update user's last active time
 	await userService.updateLastActive(user.id);
 
+	console.info("REDIRECTING!!!!!!");
 	// Complete the OAuth authorization with user information
 	const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
 		request: oauthReqInfo,
