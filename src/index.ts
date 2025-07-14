@@ -9,22 +9,15 @@ import { AuthService } from "./auth";
 export class MyMCP extends McpAgent {
 	private userContext?: UserContext;
 	private authService?: AuthService;
-	protected env?: any;
 	
+	constructor(ctx: DurableObjectState = {} as DurableObjectState, env: any = {}) {
+		super(ctx, env);
+	}
+
 	server = new McpServer({
 		name: "Multi-Tenant MCP Server",
 		version: "1.0.0",
 	});
-
-	constructor(ctx?: DurableObjectState, env?: any) {
-		if (ctx && env) {
-			super(ctx, env);
-			this.env = env;
-		} else {
-			// For standalone instances, create dummy state and env
-			super({} as DurableObjectState, {} as any);
-		}
-	}
 
 	/**
 	 * Initialize MCP server with user context
@@ -260,8 +253,103 @@ export class MyMCP extends McpAgent {
 	}
 }
 
-// Export user-aware MCP agent for Durable Objects
-export { UserMcpAgent } from "./mcp-factory";
+/**
+ * User-aware MCP Agent Durable Object
+ * This extends the base MyMCP class to work with Cloudflare Durable Objects
+ */
+export class UserMcpAgent extends MyMCP {
+	constructor(state: DurableObjectState, env: any) {
+		super(state, env);
+	}
+
+	/**
+	 * Handle incoming MCP requests with user authentication
+	 */
+	async fetch(request: Request): Promise<Response> {
+		try {
+			// Extract user context from request headers or token
+			const authService = new AuthService((this as any).env.OAUTH_PROVIDER, (this as any).env);
+			
+			// Get authorization header
+			const authHeader = request.headers.get("authorization");
+			const token = authService.extractBearerToken(authHeader || undefined);
+			
+			if (!token) {
+				return new Response("Unauthorized", { status: 401 });
+			}
+
+			// Validate token and get user context
+			const tokenPayload = await authService.validateToken(token);
+			const userContext = await authService.createUserContext(tokenPayload);
+
+			// Initialize this instance with user context if not already done
+			if (!this.getUserContext()) {
+				await this.init(userContext, authService);
+			}
+
+			// Use the parent MCP agent to handle the request
+			return await super.fetch(request);
+		} catch (error) {
+			console.error("MCP Agent error:", error);
+			return new Response("Internal Server Error", { status: 500 });
+		}
+	}
+
+	/**
+	 * Enhanced log tool usage with KV storage
+	 */
+	public async logToolUsage(toolName: string, params: any): Promise<void> {
+		const userContext = this.getUserContext();
+		if (!userContext || !(this as any).env) return;
+
+		const logEntry = {
+			userId: userContext.user.id,
+			tenantId: userContext.tenant.id,
+			toolName,
+			params,
+			timestamp: new Date().toISOString(),
+			sessionId: userContext.sessionId
+		};
+
+		// Store in tenant-scoped audit log with TTL (30 days)
+		const logKey = `audit:${userContext.tenant.id}:${Date.now()}:${crypto.randomUUID()}`;
+		const ttl = 30 * 24 * 60 * 60; // 30 days in seconds
+		
+		try {
+			await (this as any).env.OAUTH_KV.put(logKey, JSON.stringify(logEntry), {
+				expirationTtl: ttl
+			});
+		} catch (error) {
+			console.error("Failed to log tool usage to KV:", error);
+		}
+	}
+
+	/**
+	 * Get user-specific data from KV storage
+	 */
+	protected async getUserData(key: string): Promise<any> {
+		const userContext = this.getUserContext();
+		if (!userContext || !(this as any).env) return null;
+		
+		const fullKey = `user-data:${userContext.tenant.id}:${userContext.user.id}:${key}`;
+		const data = await (this as any).env.OAUTH_KV.get(fullKey);
+		
+		return data ? JSON.parse(data) : null;
+	}
+
+	/**
+	 * Store user-specific data in KV storage
+	 */
+	protected async setUserData(key: string, value: any, ttl?: number): Promise<void> {
+		const userContext = this.getUserContext();
+		if (!userContext || !(this as any).env) return;
+		
+		const fullKey = `user-data:${userContext.tenant.id}:${userContext.user.id}:${key}`;
+		const options = ttl ? { expirationTtl: ttl } : undefined;
+		
+		await (this as any).env.OAUTH_KV.put(fullKey, JSON.stringify(value), options);
+	}
+}
 
 // Create authenticated MCP handler that creates user-scoped instances
 const createAuthenticatedMcpHandler = () => {
