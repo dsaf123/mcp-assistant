@@ -384,8 +384,8 @@ export const renderAuthorizationApprovedContent = async (redirectUrl: string) =>
 	return renderApproveContent("Authorization approved!", "success", redirectUrl);
 };
 
-export const renderAuthorizationRejectedContent = async (redirectUrl: string) => {
-	return renderApproveContent("Authorization rejected.", "error", redirectUrl);
+export const renderAuthorizationRejectedContent = async (redirectUrl: string, message?: string) => {
+	return renderApproveContent(message || "Authorization rejected.", "error", redirectUrl);
 };
 
 export const parseApproveFormBody = async (body: {

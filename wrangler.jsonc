@@ -12,12 +12,16 @@
 		{
 			"new_sqlite_classes": ["MyMCP"],
 			"tag": "v1"
+		},
+		{
+			"new_sqlite_classes": ["UserMcpAgent"],
+			"tag": "v2"
 		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "MyMCP",
+				"class_name": "UserMcpAgent",
 				"name": "MCP_OBJECT"
 			}
 		]
