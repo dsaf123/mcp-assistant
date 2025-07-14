@@ -10,7 +10,7 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"migrations": [
 		{
-			"new_classes": ["MyMCP"],
+			"new_sqlite_classes": ["MyMCP"],
 			"tag": "v1"
 		}
 	],
