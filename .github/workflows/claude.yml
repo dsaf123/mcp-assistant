@@ -45,3 +45,6 @@ jobs:
           #   bun.sh
           #   registry.npmjs.org
           #   .blob.core.windows.net
+custom_instructions: |            
+  Use branch prefix: claude-agent-
+  Push your changes to the branch and verify that the branch is found before completing. Check if the branch is live - no need for PR, make sure the branch you made and committed all the changes are there.
