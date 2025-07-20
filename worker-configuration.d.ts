@@ -7,6 +7,7 @@ declare namespace Cloudflare {
         WORKOS_CLIENT_SECRET: string;
         WORKOS_CLIENT_ID: string;
 		ASSETS: Fetcher;
+		HYPERDRIVE: Hyperdrive;
 	}
 }
 interface Env extends Cloudflare.Env {}

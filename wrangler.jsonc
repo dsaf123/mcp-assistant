@@ -28,6 +28,13 @@
 			"id": "35cd96a70d0a43eb95ea27a95d7b5a28"
 		}
 	],
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "PG_DB_MEMORY",
+			"localConnectionString": "postgresql://neondb_owner:npg_lYy4z1fIiXLJ@ep-broad-base-aejjbcn4-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+		}
+	],
 	"observability": {
 		"enabled": true
 	},

@@ -5,6 +5,7 @@ import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import { AuthkitHandler } from "./authkit-handler";
 import { Props } from "./props";
+import { testDatabaseConnection, createUsersCollection } from "./db";
 
 export class MyMCP extends McpAgent<Env, unknown, Props> {
 
@@ -21,6 +22,10 @@ export class MyMCP extends McpAgent<Env, unknown, Props> {
 		
 		// Register tools with user context awareness
 		this.registerTools();
+		const result = await testDatabaseConnection(this.env.HYPERDRIVE);
+		//const result2 = await createUsersCollection(this.env.HYPERDRIVE);
+		console.log("Database connection result:", result);
+		//console.log("Database connection result:", result2);
 	}
 
 	/**
@@ -40,6 +45,40 @@ export class MyMCP extends McpAgent<Env, unknown, Props> {
 						content: [{ 
 							type: "text", 
 							text: `Result: ${a + b}` 
+						}]
+					};
+				}
+			);
+		}
+
+		// Database test tool
+		if (this.canAccessTool("test_db")) {
+			this.server.tool(
+				"test_db",
+				{},
+				async () => {
+					const result = await testDatabaseConnection(this.env.HYPERDRIVE);
+					return {
+						content: [{
+							type: "text",
+							text: `Database test result: ${JSON.stringify(result, null, 2)}`
+						}]
+					};
+				}
+			);
+		}
+
+		// Create users collection tool
+		if (this.canAccessTool("create_users_collection")) {
+			this.server.tool(
+				"create_users_collection",
+				{},
+				async () => {
+					const result = await createUsersCollection(this.env.HYPERDRIVE);
+					return {
+						content: [{
+							type: "text",
+							text: `Create collection result: ${JSON.stringify(result, null, 2)}`
 						}]
 					};
 				}
