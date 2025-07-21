@@ -5,7 +5,7 @@ import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import { AuthkitHandler } from "./authkit-handler";
 import { Props } from "./props";
-import { testDatabaseConnection, createUsersCollection } from "./db";
+import { testDatabaseConnection, createUsersCollection, add_observations, readGraph, createEntities, createRelations, deleteEntities, deleteRelations, deleteObservations, searchNodes, openNodes } from "./db";
 
 export class MyMCP extends McpAgent<Env, unknown, Props> {
 
@@ -18,38 +18,210 @@ export class MyMCP extends McpAgent<Env, unknown, Props> {
 	 * Initialize MCP server with user context
 	 */
 	async init() {
-
+		const result = await testDatabaseConnection(this.env.HYPERDRIVE);
+		console.log("Database connection result:", result);
 		
 		// Register tools with user context awareness
 		this.registerTools();
-		const result = await testDatabaseConnection(this.env.HYPERDRIVE);
-		//const result2 = await createUsersCollection(this.env.HYPERDRIVE);
-		console.log("Database connection result:", result);
-		//console.log("Database connection result:", result2);
+		
 	}
 
 	/**
 	 * Register all available tools with proper authorization
 	 */
 	private registerTools() {
-		// Add tool - basic math operation
-		if (this.canAccessTool("add")) {
-			this.server.tool(
-				"add", 
-				{ 
-					a: z.number().describe("First number to add"),
-					b: z.number().describe("Second number to add")
-				}, 
-				async ({ a, b }) => {
-					return {
-						content: [{ 
-							type: "text", 
-							text: `Result: ${a + b}` 
-						}]
-					};
-				}
-			);
-		}
+		this.server.tool(
+			"add_observations", 
+			"Add new observations to existing entities in the knowledge graph",
+			{ 
+				entity_name: z.string().describe("Entity name"),
+				observations: z.array(z.string()).describe("Observations to add")
+			}, 
+			async ({ entity_name, observations }) => {
+				console.info("Checking permissions", this.props.user);
+				const result = await add_observations(this.env.HYPERDRIVE, this.props.user.id, entity_name, observations);
+				return {
+					content: [{ 
+						type: "text", 
+						text: `Observations added: ${JSON.stringify(result, null, 2)}` 
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"test_database_connection", 
+			"Test the connection to the knowledge graph database",
+			{ 
+		
+			}, 
+			async ({  }) => {
+				console.info("Checking permissions", this.props.user);
+				const result = await testDatabaseConnection(this.env.HYPERDRIVE);
+				return {
+					content: [{ 
+						type: "text", 
+						text: `Database connection result: ${JSON.stringify(result, null, 2)}` 
+					}]
+				};
+			}
+		);
+
+
+		this.server.tool(
+			"create_entities", 
+			"Create multiple new entities in the knowledge graph",
+			{
+				entities: z.array(z.object({
+					name: z.string().describe("The name of the entity"),
+					entityType: z.string().describe("The type of the entity"),
+					observations: z.array(z.string()).describe("An array of observation contents associated with the entity")
+				})).describe("Create multiple new entities in the knowledge graph")
+			},
+			async ({ entities }) => {
+				console.info("User ID running create_entities", this.props.user.id);
+				const result = await createEntities(this.env.HYPERDRIVE, this.props.user.id, entities);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result, null, 2)
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"read_graph", 
+			"Read the entire knowledge graph",
+			{},
+			async ({ }) => {
+				console.info("Checking permissions", this.props.user);
+				const result = await readGraph(this.env.HYPERDRIVE, this.props.user.id);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result.graph, null, 2)
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"create_relations",
+			"Create multiple new relations between entities in the knowledge graph. Relations should be in active voice",
+			{
+				relations: z.array(z.object({
+					from: z.string().describe("The name of the entity where the relation starts"),
+					to: z.string().describe("The name of the entity where the relation ends"),
+					relationType: z.string().describe("The type of the relation")
+				})).describe("Create multiple new relations between entities in the knowledge graph. Relations should be in active voice")
+			},
+			async ({ relations }) => {
+				console.info("User ID running create_relations", this.props.user.id);
+				const result = await createRelations(this.env.HYPERDRIVE, this.props.user.id, relations);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result, null, 2)
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"delete_entities", 
+			"Delete multiple entities and their associated relations from the knowledge graph",
+			{
+				entity_names: z.array(z.string()).describe("The names of the entities to delete")
+			},
+			async ({ entity_names }) => {
+				console.info("User ID running delete_entities", this.props.user.id);
+				const result = await deleteEntities(this.env.HYPERDRIVE, this.props.user.id, entity_names);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result, null, 2)
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"delete_relations",
+			"Delete multiple relations from the knowledge graph",
+			{
+				relations: z.array(z.object({
+					from: z.string().describe("The name of the entity where the relation starts"),
+					to: z.string().describe("The name of the entity where the relation ends"),
+					relationType: z.string().describe("The type of the relation")
+				})).describe("Delete multiple relations between entities in the knowledge graph")
+			},
+			async ({ relations }) => {
+				console.info("User ID running delete_relations", this.props.user.id);
+				const result = await deleteRelations(this.env.HYPERDRIVE, this.props.user.id, relations);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result, null, 2)
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"delete_observations",
+			"Delete specific observations from entities in the knowledge graph",
+			{
+				entity_name: z.string().describe("The name of the entity"),
+				observations: z.array(z.string()).describe("The observations to delete")
+			},
+			async ({ entity_name, observations }) => {
+				console.info("User ID running delete_observations", this.props.user.id);
+				const result = await deleteObservations(this.env.HYPERDRIVE, this.props.user.id, entity_name, observations);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result, null, 2)
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"search_nodes",
+			"Search for nodes in the knowledge graph based on a query",
+			{
+				query: z.string().describe("The search query to match against entity names, types, and observation content")
+			},
+			async ({ query }) => {
+				console.info("User ID running search_nodes", this.props.user.id);
+				const result = await searchNodes(this.env.HYPERDRIVE, this.props.user.id, query);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result, null, 2)
+					}]
+				};
+			}
+		);
+
+		this.server.tool(
+			"open_nodes",
+			"Open specific nodes in the knowledge graph by their names",
+			{
+				names: z.array(z.string()).describe("An array of entity names to retrieve")
+			},
+			async ({ names }) => {
+				console.info("User ID running open_nodes", this.props.user.id);
+				const result = await openNodes(this.env.HYPERDRIVE, this.props.user.id, names);
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify(result.graph, null, 2)
+					}]
+				};	
+			}
+		);
 
 		// Database test tool
 		if (this.canAccessTool("test_db")) {

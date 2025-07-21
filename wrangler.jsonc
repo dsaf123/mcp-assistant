@@ -32,7 +32,7 @@
 		{
 			"binding": "HYPERDRIVE",
 			"id": "ea51b28b20f5427eb9a850cca12924ac",
-			"localConnectionString": "<LOCAL_CONNECTION_STRING_FOR_LOCAL_DEVELOPMENT_HERE>"
+			"localConnectionString": "postgresql://basicuser:basicpassword@localhost:5432/db"
 		}
 	],
 	"observability": {
