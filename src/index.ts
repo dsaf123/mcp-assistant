@@ -6,6 +6,8 @@ import OAuthProvider from "@cloudflare/workers-oauth-provider";
 import { AuthkitHandler } from "./authkit-handler";
 import { Props } from "./props";
 import { testDatabaseConnection, createUsersCollection, add_observations, readGraph, createEntities, createRelations, deleteEntities, deleteRelations, deleteObservations, searchNodes, openNodes } from "./db";
+import { sendEmail } from "./email";
+import { Resend } from "resend";
 
 export class MyMCP extends McpAgent<Env, unknown, Props> {
 
@@ -13,6 +15,8 @@ export class MyMCP extends McpAgent<Env, unknown, Props> {
 		name: "Multi-Tenant MCP Server",
 		version: "1.0.0",
 	});
+
+	resend: Resend = new Resend(this.env.RESEND_API_KEY);
 
 	/**
 	 * Initialize MCP server with user context
@@ -220,6 +224,25 @@ export class MyMCP extends McpAgent<Env, unknown, Props> {
 						text: JSON.stringify(result.graph, null, 2)
 					}]
 				};	
+			}
+		);
+
+		this.server.tool(
+			"send_email", 
+			"Send an email to the user's predefined email address",
+			{ 
+				subject: z.string().describe("The subject of the email"),
+				body: z.string().describe("The body of the email")
+			}, 
+			async ({ subject, body }) => {
+				console.info("Checking permissions", this.props.user);
+				const result = await sendEmail(this.resend, this.env.RESEND_FROM_EMAIL, this.props.user.email, subject, body);
+				return {
+					content: [{ 
+						type: "text", 
+						text: `Email sent: ${JSON.stringify(result, null, 2)}` 
+					}]
+				};
 			}
 		);
 
