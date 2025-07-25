@@ -1,11 +1,12 @@
 import { Resend } from 'resend';
 
-export async function sendEmail(resend: Resend, fromEmail: string, toEmail: string, subject: string, body: string) {
+export async function sendEmail(resend: Resend, fromEmail: string, toEmail: string, subject: string, text: string, html?: string | null) {
     const { data, error } = await resend.emails.send({
         from: fromEmail,
         to: toEmail,
         subject: subject,
-        html: body
+        text: text,
+        html: html || undefined
     });
 
     if (error) {

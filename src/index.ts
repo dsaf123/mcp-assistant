@@ -231,16 +231,17 @@ export class MyMCP extends McpAgent<Env, unknown, Props> {
 			"send_email", 
 			"Send an email to the user's predefined email address",
 			{ 
-				subject: z.string().describe("The subject of the email"),
-				body: z.string().describe("The body of the email")
+				subject: z.string().describe("Email subject line"),
+				text: z.string().describe("Plain text email content"),
+				html: z.string().optional().describe("HTML email content. When provided, the plain text argument MUST be provided as well.")
 			}, 
-			async ({ subject, body }) => {
+			async ({ subject, text, html }) => {
 				console.info("Checking permissions", this.props.user);
-				const result = await sendEmail(this.resend, this.env.RESEND_FROM_EMAIL, this.props.user.email, subject, body);
+				const result = await sendEmail(this.resend, this.env.RESEND_FROM_EMAIL, this.props.user.email, subject, text, html);
 				return {
 					content: [{ 
 						type: "text", 
-						text: `Email sent: ${JSON.stringify(result, null, 2)}` 
+						text: `Email sent successfully: ${JSON.stringify(result, null, 2)}` 
 					}]
 				};
 			}
